@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 2.8)
 
 project(ARMATUS)
 
+find_package(MPI)
+include_directories(SYSTEM ${MPI_INCLUDE_PATH})
+
 ## Prefer static to dynamic libraries
 ## We have to build boost on TravisCI each time for this, so avoid it for now
 #SET(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})

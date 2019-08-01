@@ -16,8 +16,21 @@
 
 #include "Version.hpp"
 #include "ArmatusUtil.hpp"
+#include "mpi.h"
 
 using namespace std;
+
+typedef struct {
+    int sk, fk; /* Зона ответственности k-го процесса, по оси y */
+    int rank; /* Номер текущего процесса. (k) */
+    int size; /* Число процессов. (p) */
+} parall_st;
+
+void dec(const int rank, const int ny, const int size, int *sk, int *fk){
+    *sk = (ny / size) * rank;
+    *fk = *sk + ny / size;
+    if (rank == size - 1) *fk = ny;
+}
 
 int main(int argc, char* argv[]) {
   auto str = R"(
@@ -49,7 +62,12 @@ int main(int argc, char* argv[]) {
     bool justGammaMax;
     string chrom;
   };
-
+    
+  MPI_Init(&argc, &argv);
+  parall_st l;
+  MPI_Comm_rank(MPI_COMM_WORLD, &l.rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &l.size);
+    
   Params p;
 
   // Declare the supported options.
@@ -84,9 +102,7 @@ int main(int argc, char* argv[]) {
     po::notify(vm);    
 
     if (vm.count("input")) {
-      if (p.outputMultiscale) cerr << "Multiresoultion ensemble will be written to files" << endl;
-      cerr << "Reading input from " << p.inputFile << ".\n";
-
+        
       MatrixProperties matProp;
       if (p.raoFormat) {
           matProp = parseRaoMatrix(p.inputFile, p.resolution, p.chrom, p.noNormalization);
@@ -98,13 +114,19 @@ int main(int argc, char* argv[]) {
           matProp = parseGZipMatrix(p.inputFile, p.resolution, p.chrom);
       }
       auto mat = matProp.matrix;
-      cerr << "MatrixParser read matrix of size: " << mat->size1() << " x " << mat->size2()  << "\n";
-
-      auto dEnsemble = multiscaleDomains(mat, p.gammaMax, p.stepSize, p.k, p.minMeanSamples, p.justGammaMax);
-
+        
+      if (l.rank == 0) {
+          cerr << "MatrixParser read matrix of size: " << mat->size1() << " x " << mat->size2()  << "\n";
+          if (p.outputMultiscale) cerr << "Multiresoultion ensemble will be written to files" << endl;
+          cerr << "Reading input from " << p.inputFile << ".\n";
+      }
+        
+      dec(l.rank, (int)(p.gammaMax/p.stepSize)+1, l.size, &l.sk, &l.fk);
+        
+      auto dEnsemble = multiscaleDomains(mat, l.sk, l.fk, p.stepSize, p.k, p.minMeanSamples, p.justGammaMax);
+    
       cerr << "Domain ensemble size: " << dEnsemble.domainSets.size() << endl;
       auto dConsensus = consensusDomains(dEnsemble);
-
 
       auto consensusFile = p.outputPrefix + ".consensus.txt";
       cerr << "Writing consensus domains to: " << consensusFile << endl;;
@@ -123,7 +145,7 @@ int main(int argc, char* argv[]) {
           outputDomains(dSet, multiscaleFile.str(),matProp);
         }
       }
-
+    
 
     } else {
       cerr << "Input file was not set.\n";
@@ -135,6 +157,7 @@ int main(int argc, char* argv[]) {
     std::exit(1);
   }
 
-
+  MPI_Finalize();
+    
   return 0;
 }

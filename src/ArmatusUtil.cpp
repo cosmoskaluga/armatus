@@ -275,17 +275,19 @@ DomainSet consensusDomains(WeightedDomainEnsemble& dEnsemble) {
 }
 
 WeightedDomainEnsemble multiscaleDomains(std::shared_ptr<SparseMatrix> A, 
-    float gammaMax, double stepSize, int k, int minMeanSamples, bool justThisGamma) {
+    int counterMin, int counterMax, double stepSize, int k, int minMeanSamples, bool justThisGamma) {
 
     WeightedDomainEnsemble dEnsemble;
-    double eps = 1e-5;
-    double gamma =0.0;
+    //double eps = 1e-5;
+    double gamma = 0.0;
     if (justThisGamma)  {
-        gamma = gammaMax;
+        gamma = counterMax*stepSize;
     }
-
-    for (; gamma <= gammaMax+eps; gamma+=stepSize) {
-
+    int counter;
+    
+    //before: for (gamma = gammaMin; gamma <= gammaMax+eps; gamma+=stepSize) {
+    for (counter = counterMin; counter < counterMax; counter++){
+        gamma = counter*stepSize;
         cerr << "gamma=" << gamma << endl;
  
         ArmatusParams params(A, gamma, k, minMeanSamples); // k parameter is not used for anything in Params
