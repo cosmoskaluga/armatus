@@ -58,7 +58,7 @@ struct WeightedDomainEnsemble {
 
 // void optimalDomains(std::shared_ptr<SparseMatrix> A, float gamma);
 
-WeightedDomainEnsemble multiscaleDomains(std::shared_ptr<SparseMatrix> A, float gammaMax, double stepSize, int k, int minMeanSamples, bool justThisGamma);
+WeightedDomainEnsemble multiscaleDomains(std::shared_ptr<SparseMatrix> A, int counterMin, int counterMax, double stepSize, int k, int minMeanSamples, bool justThisGamma);
 DomainSet consensusDomains(WeightedDomainEnsemble& dEnsemble);
 
 void outputDomains(DomainSet dSet, string fname, MatrixProperties matProp);
